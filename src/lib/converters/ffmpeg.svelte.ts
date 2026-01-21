@@ -1,3 +1,4 @@
+// 导入必要的类型和工具
 import { VertFile } from "$lib/types";
 import { Converter, FormatInfo } from "./converter.svelte";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
@@ -7,7 +8,8 @@ import { m } from "$lib/paraglide/messages";
 import { Settings } from "$lib/sections/settings/index.svelte";
 import { ToastManager } from "$lib/util/toast.svelte";
 
-// TODO: differentiate in UI? (not native formats)
+// TODO: 在 UI 中区分？（非原生格式）
+// 支持的视频格式列表
 const videoFormats = [
 	"mkv",
 	"mp4",
@@ -33,25 +35,27 @@ const videoFormats = [
 	"divx",
 ];
 
+// FFmpeg 转换器类，继承自 Converter 基类
 export class FFmpegConverter extends Converter {
-	private ffmpeg: FFmpeg = null!;
-	public name = "ffmpeg";
-	public ready = $state(false);
+	private ffmpeg: FFmpeg = null!; // FFmpeg 实例
+	public name = "ffmpeg"; // 转换器名称
+	public ready = $state(false); // 就绪状态，使用 Svelte 的响应式状态
 
-	private activeConversions = new Map<string, FFmpeg>();
+	private activeConversions = new Map<string, FFmpeg>(); // 活跃转换映射，跟踪正在进行的转换
 
+	// 支持的格式列表
 	public supportedFormats = [
-		new FormatInfo("mp3", true, true),
+		new FormatInfo("mp3", true, true), // 格式名称, 是否支持输入, 是否支持输出
 		new FormatInfo("wav", true, true),
 		new FormatInfo("flac", true, true),
 		new FormatInfo("ogg", true, true),
-		new FormatInfo("mogg", true, false),
+		new FormatInfo("mogg", true, false), // 仅支持输入
 		new FormatInfo("oga", true, true),
 		new FormatInfo("opus", true, true),
 		new FormatInfo("aac", true, true),
-		new FormatInfo("alac", true, true), // outputted as m4a
-		new FormatInfo("m4a", true, true), // can be alac
-		new FormatInfo("caf", true, false), // can be alac
+		new FormatInfo("alac", true, true), // 输出为 m4a
+		new FormatInfo("m4a", true, true), // 可以是 alac
+		new FormatInfo("caf", true, false), // 可以是 alac
 		new FormatInfo("wma", true, true),
 		new FormatInfo("amr", true, true),
 		new FormatInfo("ac3", true, true),
@@ -60,44 +64,53 @@ export class FFmpegConverter extends Converter {
 		new FormatInfo("aif", true, true),
 		new FormatInfo("mp1", true, false),
 		new FormatInfo("mp2", true, true),
-		new FormatInfo("mpc", true, false), // unknown if it works, can't find sample file but ffmpeg should support i think?
-		//new FormatInfo("raw", true, false), // usually pcm
-		new FormatInfo("dsd", true, false), // dsd
-		new FormatInfo("dsf", true, false), // dsd
-		new FormatInfo("dff", true, false), // dsd
+		new FormatInfo("mpc", true, false), // 未知是否工作，找不到示例文件，但 ffmpeg 应该支持
+		//new FormatInfo("raw", true, false), // 通常是 pcm
+		new FormatInfo("dsd", true, false), // dsd 格式
+		new FormatInfo("dsf", true, false), // dsd 格式
+		new FormatInfo("dff", true, false), // dsd 格式
 		new FormatInfo("mqa", true, false),
 		new FormatInfo("au", true, true),
 		new FormatInfo("m4b", true, true),
 		new FormatInfo("voc", true, true),
 		new FormatInfo("weba", true, true),
+		// 添加所有视频格式（仅作为输入和输出，不作为原生格式）
 		...videoFormats.map((f) => new FormatInfo(f, true, true, false)),
 	];
 
-	public readonly reportsProgress = true;
+	public readonly reportsProgress = true; // 支持进度报告
 
+	// 构造函数：初始化 FFmpeg 转换器
 	constructor() {
 		super();
 		log(["converters", this.name], `created converter`);
+		// 如果不在浏览器环境中，直接返回
 		if (!browser) return;
 		try {
-			// this is just to cache the wasm and js for when we actually use it. we're not using this ffmpeg instance
+			// 创建 FFmpeg 实例，仅用于缓存 WASM 和 JS 文件，实际转换时会创建新实例
 			this.ffmpeg = new FFmpeg();
 			(async () => {
+				// FFmpeg 核心文件的 CDN 地址
 				const baseURL =
 					"https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
 
+				// 设置状态为下载中
 				this.status = "downloading";
 
+				// 加载 FFmpeg WASM 核心文件
 				await this.ffmpeg.load({
 					coreURL: `${baseURL}/ffmpeg-core.js`,
 					wasmURL: `${baseURL}/ffmpeg-core.wasm`,
 				});
 
+				// 设置状态为就绪
 				this.status = "ready";
 			})();
 		} catch (err) {
+			// 加载失败时的错误处理
 			error(["converters", this.name], `Error loading ffmpeg: ${err}`);
 			this.status = "error";
+			// 显示错误提示
 			ToastManager.add({
 				type: "error",
 				message: m["workers.errors.ffmpeg"](),
@@ -105,20 +118,26 @@ export class FFmpegConverter extends Converter {
 		}
 	}
 
+	// 执行格式转换
 	public async convert(input: VertFile, to: string): Promise<VertFile> {
+		// 确保目标格式以点开头
 		if (!to.startsWith(".")) to = `.${to}`;
 
+		// 处理 ALAC 格式特殊情况（输出为 m4a）
 		const isAlac = to === ".alac";
 		if (isAlac) to = ".m4a";
 
 		let conversionError: string | null = null;
+		// 设置 FFmpeg 实例
 		const ffmpeg = await this.setupFFmpeg(input);
 
+		// 将转换添加到活跃转换映射
 		this.activeConversions.set(input.id, ffmpeg);
 
-		// listen for errors during conversion
+		// 监听转换过程中的错误
 		const errorListener = (l: { message: string }) => {
 			const msg = l.message;
+			// 检测不支持的采样率错误
 			if (
 				msg.includes("Specified sample rate") &&
 				msg.includes("is not supported")
@@ -127,8 +146,10 @@ export class FFmpegConverter extends Converter {
 				conversionError = m["workers.errors.invalid_rate"]({
 					rate,
 				});
+			// 检测无音频流错误
 			} else if (msg.includes("Stream map '0:a:0' matches no streams.")) {
 				conversionError = m["workers.errors.no_audio"]();
+			// 检测其他通用错误
 			} else if (
 				msg.includes("Error initializing output stream") ||
 				msg.includes("Error while opening encoder") ||
@@ -141,8 +162,10 @@ export class FFmpegConverter extends Converter {
 			}
 		};
 
+		// 注册错误监听器
 		ffmpeg.on("log", errorListener);
 
+		// 将输入文件写入 FFmpeg 虚拟文件系统
 		const buf = new Uint8Array(await input.file.arrayBuffer());
 		await ffmpeg.writeFile("input", buf);
 		log(
@@ -150,6 +173,7 @@ export class FFmpegConverter extends Converter {
 			`wrote ${input.name} to ffmpeg virtual fs`,
 		);
 
+		// 构建转换命令
 		const command = await this.buildConversionCommand(
 			ffmpeg,
 			input,
@@ -157,25 +181,30 @@ export class FFmpegConverter extends Converter {
 			isAlac,
 		);
 		log(["converters", this.name], `FFmpeg command: ${command.join(" ")}`);
+		// 执行 FFmpeg 命令
 		await ffmpeg.exec(command);
 		log(["converters", this.name], "executed ffmpeg command");
 
+		// 如果有错误，抛出异常
 		if (conversionError) {
 			ffmpeg.off("log", errorListener);
 			ffmpeg.terminate();
 			throw new Error(conversionError);
 		}
 
+		// 读取输出文件
 		const output = (await ffmpeg.readFile(
 			"output" + to,
 		)) as unknown as Uint8Array;
 
+		// 检查输出文件是否为空
 		if (!output || output.length === 0) {
 			ffmpeg.off("log", errorListener);
 			ffmpeg.terminate();
 			throw new Error("empty file returned");
 		}
 
+		// 生成输出文件名
 		const outputFileName =
 			input.name.split(".").slice(0, -1).join(".") + to;
 		log(
@@ -183,14 +212,18 @@ export class FFmpegConverter extends Converter {
 			`read ${outputFileName} from ffmpeg virtual fs`,
 		);
 
+		// 清理资源
 		ffmpeg.off("log", errorListener);
 		ffmpeg.terminate();
 
+		// 返回转换后的文件
 		const outBuf = new Uint8Array(output).buffer.slice(0);
 		return new VertFile(new File([outBuf], outputFileName), to);
 	}
 
+	// 取消正在进行的转换
 	public async cancel(input: VertFile): Promise<void> {
+		// 从活跃转换映射中获取 FFmpeg 实例
 		const ffmpeg = this.activeConversions.get(input.id);
 		if (!ffmpeg) {
 			error(
@@ -205,21 +238,28 @@ export class FFmpegConverter extends Converter {
 			`cancelling conversion for file ${input.name}`,
 		);
 
+		// 终止 FFmpeg 进程
 		ffmpeg.terminate();
+		// 从活跃转换映射中移除
 		this.activeConversions.delete(input.id);
 	}
 
+	// 设置 FFmpeg 实例并配置监听器
 	private async setupFFmpeg(input: VertFile): Promise<FFmpeg> {
+		// 创建新的 FFmpeg 实例
 		const ffmpeg = new FFmpeg();
 
+		// 监听转换进度
 		ffmpeg.on("progress", (progress) => {
 			input.progress = progress.progress * 100;
 		});
 
+		// 监听日志输出
 		ffmpeg.on("log", (l) => {
 			log(["converters", this.name], l.message);
 		});
 
+		// 加载 FFmpeg 核心
 		const baseURL =
 			"https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
 		await ffmpeg.load({
@@ -230,26 +270,26 @@ export class FFmpegConverter extends Converter {
 		return ffmpeg;
 	}
 
+	// 检测音频比特率
 	private async detectAudioBitrate(ffmpeg: FFmpeg): Promise<number | null> {
+		// 构建 ffprobe 命令参数
 		const args = [
-			"-v",
-			"quiet",
-			"-select_streams",
-			"a:0",
-			"-show_entries",
-			"stream=bit_rate",
-			"-of",
-			"default=noprint_wrappers=1:nokey=1",
+			"-v", "quiet", // 静默模式
+			"-select_streams", "a:0", // 选择第一个音频流
+			"-show_entries", "stream=bit_rate", // 显示比特率
+			"-of", "default=noprint_wrappers=1:nokey=1", // 输出格式
 			"input",
 		];
 
 		try {
 			let bitrate: number | null = null;
 
+			// 比特率监听器
 			const bitrateListener = (event: { message: string }) => {
 				if (bitrate !== null) return;
 				const n = parseInt(event.message.trim(), 10);
 				if (!n) return;
+				// 将比特率转换为 kbps
 				bitrate = Math.round(n / 1000);
 				log(
 					["converters", this.name],
@@ -257,37 +297,40 @@ export class FFmpegConverter extends Converter {
 				);
 			};
 
+			// 注册监听器
 			ffmpeg.on("log", bitrateListener);
 
 			try {
+				// 执行 ffprobe 命令
 				await ffmpeg.ffprobe.call(ffmpeg, args);
 				return bitrate;
 			} finally {
+				// 清理监听器
 				ffmpeg.off("log", bitrateListener);
 			}
 		} catch {
+			// 检测失败返回 null
 			return null;
 		}
 	}
 
+	// 检测音频采样率
 	private async detectAudioSampleRate(
 		ffmpeg: FFmpeg,
 	): Promise<number | null> {
+		// 构建 ffprobe 命令参数
 		const args = [
-			"-v",
-			"quiet",
-			"-select_streams",
-			"a:0",
-			"-show_entries",
-			"stream=sample_rate",
-			"-of",
-			"default=noprint_wrappers=1:nokey=1",
+			"-v", "quiet", // 静默模式
+			"-select_streams", "a:0", // 选择第一个音频流
+			"-show_entries", "stream=sample_rate", // 显示采样率
+			"-of", "default=noprint_wrappers=1:nokey=1", // 输出格式
 			"input",
 		];
 
 		try {
 			let sampleRate: number | null = null;
 
+			// 采样率监听器
 			const sampleRateListener = (event: { message: string }) => {
 				if (sampleRate !== null) return;
 				const n = parseInt(event.message.trim(), 10);
@@ -299,29 +342,36 @@ export class FFmpegConverter extends Converter {
 				);
 			};
 
+			// 注册监听器
 			ffmpeg.on("log", sampleRateListener);
 
 			try {
+				// 执行 ffprobe 命令
 				await ffmpeg.ffprobe.call(ffmpeg, args);
 				return sampleRate;
 			} finally {
+				// 清理监听器
 				ffmpeg.off("log", sampleRateListener);
 			}
 		} catch {
+			// 检测失败返回 null
 			return null;
 		}
 	}
 
+	// 构建 FFmpeg 转换命令
 	private async buildConversionCommand(
 		ffmpeg: FFmpeg,
 		input: VertFile,
 		to: string,
 		isAlac: boolean = false,
 	): Promise<string[]> {
+		// 获取输入和输出格式
 		const inputFormat = input.from.slice(1);
 		const outputFormat = to.slice(1);
 		const m4a = isAlac || to === ".m4a";
 
+		// 无损格式列表
 		const lossless = [
 			"flac",
 			"m4a",
@@ -332,48 +382,53 @@ export class FFmpegConverter extends Converter {
 			"dsf",
 			"dff",
 		];
+		// 获取用户设置
 		const userSetting = Settings.instance.settings.ffmpegQuality;
 		const userSampleRate = Settings.instance.settings.ffmpegSampleRate;
 		const customSampleRate =
 			Settings.instance.settings.ffmpegCustomSampleRate ?? 44100;
 		const keepMetadata = Settings.instance.settings.metadata;
 
+		// 初始化命令参数
 		let audioBitrateArgs: string[] = [];
 		let sampleRateArgs: string[] = [];
 		let metadataArgs: string[] = [];
 		let m4aArgs: string[] = [];
 
 		log(["converters", this.name], `keep metadata: ${keepMetadata}`);
+		// 如果不保留元数据，添加移除元数据的参数
 		if (!keepMetadata) {
 			metadataArgs = [
-				"-map_metadata", // remove metadata
+				"-map_metadata", // 移除元数据
 				"-1",
-				"-map_chapters", // remove chapters
+				"-map_chapters", // 移除章节
 				"-1",
-				"-map", // remove cover art
+				"-map", // 移除封面
 				"a",
 			];
 		}
 
+		// 判断是否为无损到有损转换
 		const isLosslessToLossy =
 			lossless.includes(inputFormat) && !lossless.includes(outputFormat);
 		if (userSetting !== "auto") {
-			// user's setting
+			// 使用用户设置的比特率
 			audioBitrateArgs = ["-b:a", `${userSetting}k`];
 			log(
 				["converters", this.name],
 				`using user setting for audio bitrate: ${userSetting}`,
 			);
 		} else {
-			// detect bitrate of original file and use
+			// 自动检测输入文件的比特率
 			if (isLosslessToLossy) {
-				// use safe default
+				// 无损到有损转换，使用安全默认值
 				audioBitrateArgs = ["-b:a", "128k"];
 				log(
 					["converters", this.name],
 					`converting from lossless to lossy, using default audio bitrate: 128k`,
 				);
 			} else {
+				// 检测输入文件的比特率
 				const inputBitrate = await this.detectAudioBitrate(ffmpeg);
 				audioBitrateArgs = inputBitrate
 					? ["-b:a", `${inputBitrate}k`]
@@ -385,8 +440,9 @@ export class FFmpegConverter extends Converter {
 			}
 		}
 
-		// sample rate setting
+		// 采样率设置
 		if (userSampleRate !== "auto") {
+			// 使用用户设置的采样率
 			const rate =
 				userSampleRate === "custom"
 					? customSampleRate.toString()
@@ -397,9 +453,9 @@ export class FFmpegConverter extends Converter {
 				`using user setting for sample rate: ${rate}`,
 			);
 		} else {
-			// detect sample rate of original file and use
+			// 自动检测输入文件的采样率
 			if (isLosslessToLossy) {
-				// use safe default
+				// 无损到有损转换，使用安全默认值
 				const defaultRate = to === ".opus" ? "48000" : "44100";
 				log(
 					["converters", this.name],
@@ -407,9 +463,10 @@ export class FFmpegConverter extends Converter {
 				);
 				sampleRateArgs = ["-ar", defaultRate];
 			} else {
+				// 检测输入文件的采样率
 				let inputSampleRate = await this.detectAudioSampleRate(ffmpeg);
+				// 特殊情况：Opus 不支持 44100Hz，调整为 48000Hz
 				if (to === ".opus" && inputSampleRate === 44100) {
-					// special case: opus does not support 44100Hz which is more common - adjust to 48000Hz
 					log(
 						["converters", this.name],
 						"conversion to opus with 44100Hz sample rate detected, adjusting to 48000Hz",
@@ -427,117 +484,103 @@ export class FFmpegConverter extends Converter {
 			}
 		}
 
-		// video to audio
+		// 视频到音频转换
 		if (videoFormats.includes(inputFormat)) {
 			log(
 				["converters", this.name],
 				`Converting video ${input.from} to audio ${to}`,
 			);
 			return [
-				"-i",
-				"input",
-				"-map",
-				"0:a:0",
-				...metadataArgs,
-				...audioBitrateArgs,
-				...sampleRateArgs,
-				"output" + to,
+				"-i", "input", // 输入文件
+				"-map", "0:a:0", // 映射第一个音频流
+				...metadataArgs, // 元数据参数
+				...audioBitrateArgs, // 比特率参数
+				...sampleRateArgs, // 采样率参数
+				"output" + to, // 输出文件
 			];
 		}
 
-		// audio to video
+		// 音频到视频转换
 		if (videoFormats.includes(outputFormat)) {
 			log(
 				["converters", this.name],
 				`Converting audio ${input.from} to video ${to}`,
 			);
 
+			// 尝试提取专辑封面
 			const hasAlbumArt = keepMetadata
 				? await this.extractAlbumArt(ffmpeg)
 				: false;
 			const codecArgs = toArgs(to, isAlac);
 
 			if (hasAlbumArt) {
+				// 使用专辑封面作为视频背景
 				log(
 					["converters", this.name],
 					"Using album art as video background",
 				);
 				return [
-					"-loop",
-					"1",
-					"-i",
-					"cover.jpg",
-					"-i",
-					"input",
-					"-vf",
-					"scale=trunc(iw/2)*2:trunc(ih/2)*2",
-					"-shortest",
-					"-pix_fmt",
-					"yuv420p",
-					"-r",
-					"1",
-					...codecArgs,
-					...metadataArgs,
-					...audioBitrateArgs,
-					...sampleRateArgs,
-					"output" + to,
+					"-loop", "1", // 循环图片
+					"-i", "cover.jpg", // 专辑封面
+					"-i", "input", // 音频文件
+					"-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", // 调整尺寸为偶数
+					"-shortest", // 以最短的流为准
+					"-pix_fmt", "yuv420p", // 像素格式
+					"-r", "1", // 帧率 1 fps
+					...codecArgs, // 编解码器参数
+					...metadataArgs, // 元数据参数
+					...audioBitrateArgs, // 比特率参数
+					...sampleRateArgs, // 采样率参数
+					"output" + to, // 输出文件
 				];
 			} else {
+				// 使用纯色背景
 				log(["converters", this.name], "Using solid color background");
 				return [
-					"-f",
-					"lavfi",
-					"-i",
-					"color=c=black:s=512x512:rate=1",
-					"-i",
-					"input",
-					"-shortest",
-					"-pix_fmt",
-					"yuv420p",
-					"-r",
-					"1",
-					...toArgs(to, isAlac),
-					...metadataArgs,
-					...audioBitrateArgs,
-					...sampleRateArgs,
-					"output" + to,
+					"-f", "lavfi", // 使用 lavfi 滤镜
+					"-i", "color=c=black:s=512x512:rate=1", // 黑色背景 512x512 1fps
+					"-i", "input", // 音频文件
+					"-shortest", // 以最短的流为准
+					"-pix_fmt", "yuv420p", // 像素格式
+					"-r", "1", // 帧率 1 fps
+					...toArgs(to, isAlac), // 编解码器参数
+					...metadataArgs, // 元数据参数
+					...audioBitrateArgs, // 比特率参数
+					...sampleRateArgs, // 采样率参数
+					"output" + to, // 输出文件
 				];
 			}
 		}
 
-		// audio to audio
+		// 音频到音频转换
 		log(
 			["converters", this.name],
 			`Converting audio ${input.from} to audio ${to}`,
 		);
 		const { audio: audioCodec } = getCodecs(to, isAlac);
-		if (m4a && keepMetadata) m4aArgs = ["-c:v", "copy"]; // for album art
+		// 如果是 m4a 格式且保留元数据，保留视频流（专辑封面）
+		if (m4a && keepMetadata) m4aArgs = ["-c:v", "copy"];
 
 		return [
-			"-i",
-			"input",
-			...m4aArgs,
-			"-c:a",
-			audioCodec,
-			...metadataArgs,
-			...audioBitrateArgs,
-			...sampleRateArgs,
-			"output" + to,
+			"-i", "input", // 输入文件
+			...m4aArgs, // m4a 特定参数
+			"-c:a", audioCodec, // 音频编解码器
+			...metadataArgs, // 元数据参数
+			...audioBitrateArgs, // 比特率参数
+			...sampleRateArgs, // 采样率参数
+			"output" + to, // 输出文件
 		];
 	}
 
+	// 提取专辑封面
 	private async extractAlbumArt(ffmpeg: FFmpeg): Promise<boolean> {
-		//  extract using stream mapping (should work for most)
+		// 使用流映射提取（适用于大多数情况）
 		if (
 			await this.tryExtractAlbumArt(ffmpeg, [
-				"-i",
-				"input",
-				"-map",
-				"0:1",
-				"-c:v",
-				"copy",
-				"-update",
-				"1",
+				"-i", "input",
+				"-map", "0:1", // 映射第二个流（通常是封面）
+				"-c:v", "copy", // 直接复制视频流
+				"-update", "1", // 更新文件
 				"cover.jpg",
 			])
 		) {
@@ -548,16 +591,13 @@ export class FFmpegConverter extends Converter {
 			return true;
 		}
 
-		// fallback: extract without stream mapping (this probably won't happen)
+		// 回退方法：不使用流映射提取
 		if (
 			await this.tryExtractAlbumArt(ffmpeg, [
-				"-i",
-				"input",
-				"-an",
-				"-c:v",
-				"copy",
-				"-update",
-				"1",
+				"-i", "input",
+				"-an", // 忽略音频
+				"-c:v", "copy", // 直接复制视频流
+				"-update", "1", // 更新文件
 				"cover.jpg",
 			])
 		) {
@@ -568,6 +608,7 @@ export class FFmpegConverter extends Converter {
 			return true;
 		}
 
+		// 未找到专辑封面
 		log(
 			["converters", this.name],
 			"No album art found, will create solid color background",
@@ -575,70 +616,80 @@ export class FFmpegConverter extends Converter {
 		return false;
 	}
 
+	// 尝试提取专辑封面
 	private async tryExtractAlbumArt(
 		ffmpeg: FFmpeg,
 		command: string[],
 	): Promise<boolean> {
 		try {
+			// 执行提取命令
 			await ffmpeg.exec(command);
+			// 读取封面文件
 			const coverData = await ffmpeg.readFile("cover.jpg");
+			// 检查封面数据是否存在且不为空
 			return !!(coverData && (coverData as Uint8Array).length > 0);
 		} catch {
+			// 提取失败返回 false
 			return false;
 		}
 	}
 }
 
-// and here i was, thinking i'd be done with ffmpeg after finishing vertd
-// but OH NO we just HAD to have someone suggest to allow album art video generation.
+// 开发者注释：
+// 我以为完成 vertd 后就不再需要 ffmpeg 了
+// 但是 OH NO，有人建议允许生成专辑封面视频
 //
-// i hate you SO much.
+// 我太讨厌你了
 // - love, maddie
+
+// 根据文件扩展名生成编解码器参数
 const toArgs = (ext: string, isAlac: boolean = false): string[] => {
 	const codecs = getCodecs(ext, isAlac);
 	const args = ["-c:v", codecs.video];
 
+	// 根据视频编解码器添加特定参数
 	switch (codecs.video) {
 		case "libx264": {
 			args.push(
-				"-preset",
-				"ultrafast",
-				"-crf",
-				"18",
-				"-tune",
-				"stillimage",
+				"-preset", "ultrafast", // 最快编码预设
+				"-crf", "18", // 恒定质量因子（18 为高质量）
+				"-tune", "stillimage", // 针对静态图像优化
 			);
 			break;
 		}
 
 		case "libvpx": {
-			args.push("-c:v", "libvpx-vp9");
+			args.push("-c:v", "libvpx-vp9"); // 使用 VP9 编解码器
 			break;
 		}
 
 		case "mpeg2video": {
-			// for mpeg, mpg, vob, mxf
-			if (ext === ".mxf") args.push("-ar", "48000"); // force 48kHz sample rate
+			// 用于 mpeg, mpg, vob, mxf
+			if (ext === ".mxf") args.push("-ar", "48000"); // 强制 48kHz 采样率
 			break;
 		}
 	}
 
+	// 添加音频编解码器
 	args.push("-c:a", codecs.audio);
 
+	// 如果是 AAC，添加实验性标志
 	if (codecs.audio === "aac") args.push("-strict", "experimental");
 
-	if (ext === ".divx") args.unshift("-f", "avi");
-	if (ext === ".mxf") args.push("-strict", "unofficial");
+	// 特殊格式处理
+	if (ext === ".divx") args.unshift("-f", "avi"); // 强制使用 AVI 容器
+	if (ext === ".mxf") args.push("-strict", "unofficial"); // 非官方格式
 
 	return args;
 };
 
+// 根据文件扩展名获取编解码器
 const getCodecs = (
 	ext: string,
 	isAlac: boolean = false,
 ): { video: string; audio: string } => {
 	switch (ext) {
-		// video <-> audio
+		// 视频 <-> 音频
 		case ".mp4":
 		case ".mkv":
 		case ".mov":
@@ -669,7 +720,7 @@ const getCodecs = (
 		case ".mxf":
 			return { video: "mpeg2video", audio: "pcm_s16le" };
 
-		// audio
+		// 音频
 		case ".mp3":
 			return { video: "libx264", audio: "libmp3lame" };
 		case ".flac":
@@ -693,32 +744,35 @@ const getCodecs = (
 		case ".wma":
 			return { video: "libx264", audio: "wmav2" };
 
+		// 默认编解码器
 		default:
 			return { video: "libx264", audio: "aac" };
 	}
 };
 
+// 支持的转换比特率列表
 export const CONVERSION_BITRATES = [
-	"auto",
-	320,
-	256,
-	192,
-	128,
-	96,
-	64,
-	32,
+	"auto", // 自动检测
+	320, // 320 kbps
+	256, // 256 kbps
+	192, // 192 kbps
+	128, // 128 kbps
+	96, // 96 kbps
+	64, // 64 kbps
+	32, // 32 kbps
 ] as const;
 export type ConversionBitrate = (typeof CONVERSION_BITRATES)[number];
 
+// 支持的采样率列表
 export const SAMPLE_RATES = [
-	"auto",
-	"custom",
-	"48000",
-	"44100",
-	"32000",
-	"22050",
-	"16000",
-	"11025",
-	"8000",
+	"auto", // 自动检测
+	"custom", // 自定义
+	"48000", // 48000 Hz
+	"44100", // 44100 Hz
+	"32000", // 32000 Hz
+	"22050", // 22050 Hz
+	"16000", // 16000 Hz
+	"11025", // 11025 Hz
+	"8000", // 8000 Hz
 ] as const;
 export type SampleRate = (typeof SAMPLE_RATES)[number];
