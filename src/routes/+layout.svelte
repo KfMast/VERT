@@ -114,6 +114,7 @@
 	$effect(() => {
 		enablePlausible =
 			!!PUB_PLAUSIBLE_URL &&
+			!PUB_PLAUSIBLE_URL.includes("example.com") &&
 			Settings.instance.settings.plausible &&
 			!DISABLE_ALL_EXTERNAL_REQUESTS;
 		if (!enablePlausible && browser) {
@@ -188,7 +189,7 @@
 		<Layout.UploadRegion />
 
 		<div>
-			<Layout.MobileLogo />
+			<!-- <Layout.MobileLogo /> -->
 			<Navbar.Desktop />
 		</div>
 
@@ -202,8 +203,8 @@
 		<Layout.Dialogs />
 
 		<div>
-			<Layout.Footer />
-			<Navbar.Mobile />
+			<!-- <Layout.Footer /> -->
+			<!-- <Navbar.Mobile /> -->
 		</div>
 	</div>
 {/key}

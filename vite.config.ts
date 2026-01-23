@@ -26,6 +26,7 @@ export default defineConfig(({ command }) => {
 			project: "./project.inlang",
 			outdir: "./src/lib/paraglide",
 			strategy: ["localStorage", "preferredLanguage", "baseLocale"],
+			cleanOutdir: false,
 		}),
 		svg({
 			includePaths: ["./src/lib/assets"],

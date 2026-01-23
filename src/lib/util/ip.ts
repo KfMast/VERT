@@ -46,7 +46,8 @@ export const ip = async (): Promise<IpInfo> => {
 
 		return res;
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	} catch (_) {
+	} catch (e) {
+		console.warn("Failed to fetch IP address (likely blocked by extension), falling back to localhost.");
 		return {
 			ip: "127.0.0.1",
 			asn: "AS0",

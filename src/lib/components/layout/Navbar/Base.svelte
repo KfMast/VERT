@@ -168,7 +168,12 @@
 	</a>
 {/snippet}
 
-<div bind:this={container}>
+<div bind:this={container} >
+	<!-- 
+		隐藏原因：用户请求完全隐藏导航栏模块
+		预期效果：导航栏在页面上完全不可见，不占用空间
+		恢复方式：移除 style="display: none;" 即可恢复显示
+	-->
 	<Panel class="max-w-[778px] w-screen h-20 flex items-center gap-3 relative">
 		{@const linkRect = linkRects.at(selectedIndex) || linkRects[0]}
 		{#if linkRect && isInitialized}
