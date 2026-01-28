@@ -4,7 +4,7 @@ import { error, log } from "$lib/util/logger";
 import { VertFile } from "$lib/types";
 import { parseBlob, selectCover } from "music-metadata";
 import { writable } from "svelte/store";
-import { addDialog } from "./DialogProvider";
+// import { addDialog } from "./DialogProvider";
 import PQueue from "p-queue";
 import { getLocale, setLocale } from "$lib/paraglide/runtime";
 import { m } from "$lib/paraglide/messages";
@@ -304,29 +304,30 @@ class Files {
 				localStorage.getItem("acceptedExternalWarning") === "true";
 			if (isVideo && !acceptedExternalWarning && !this._warningShown) {
 				this._warningShown = true;
-				const title = m["convert.external_warning.title"]();
-				const message = m["convert.external_warning.text"]();
-				const buttons = [
-					{
-						text: m["convert.external_warning.no"](),
-						action: () => {
-							this.files = [
-								...this.files.filter(
-									(f) => !f.converters.map((c) => c.name).includes("vertd"),
-								),
-							];
-							this._warningShown = false;
-						},
-					},
-					{
-						text: m["convert.external_warning.yes"](),
-						action: () => {
-							localStorage.setItem("acceptedExternalWarning", "true");
-							this._warningShown = false;
-						},
-					},
-				];
-				addDialog(title, message, buttons, "warning");
+				// 上传视频后，提示弹窗
+				// const title = m["convert.external_warning.title"]();
+				// const message = m["convert.external_warning.text"]();
+				// const buttons = [
+				// 	{
+				// 		text: m["convert.external_warning.no"](),
+				// 		action: () => {
+				// 			this.files = [
+				// 				...this.files.filter(
+				// 					(f) => !f.converters.map((c) => c.name).includes("vertd"),
+				// 				),
+				// 			];
+				// 			this._warningShown = false;
+				// 		},
+				// 	},
+				// 	{
+				// 		text: m["convert.external_warning.yes"](),
+				// 		action: () => {
+				// 			localStorage.setItem("acceptedExternalWarning", "true");
+				// 			this._warningShown = false;
+				// 		},
+				// 	},
+				// ];
+				// addDialog(title, message, buttons, "warning");
 			}
 		}
 	}
@@ -358,6 +359,14 @@ class Files {
 
 	public async downloadAll() {
 		if (files.files.length === 0) return;
+		if (files.files.length > 1) {
+			// 使用iframe 与父级通信，通知父级限制弹窗
+			window.parent.postMessage(
+        { type: 'IFRAME_READY', message: "batchDownloadLimit" },
+        'http://192.168.2.242:8136'
+      );
+			return;
+		}
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const dlFiles: any[] = [];
 		for (let i = 0; i < files.files.length; i++) {
@@ -383,7 +392,7 @@ class Files {
 		const url = URL.createObjectURL(blob);
 
 		const settings = JSON.parse(localStorage.getItem("settings") ?? "{}");
-		const filenameFormat = settings.filenameFormat || "VERT_%name%";
+		const filenameFormat = settings.filenameFormat || "FILE_%name%";
 
 		const format = (name: string) => {
 			const date = new Date().toISOString();
@@ -424,6 +433,44 @@ export function setEffects(effectsEnabled: boolean) {
 	localStorage.setItem("effects", effectsEnabled.toString());
 	log(["effects"], `set to ${effectsEnabled}`);
 	effects.set(effectsEnabled);
+}
+
+// Global conversion count store
+export const conversionCount = writable(0);
+
+// Initialize conversion count from localStorage
+if (browser) {
+	try {
+		const storedCount = localStorage.getItem("conversionCount");
+		if (storedCount) {
+			const parsed = parseInt(storedCount, 10);
+			if (!isNaN(parsed)) {
+				conversionCount.set(parsed);
+			}
+		}
+	} catch (e) {
+		error(["store"], `Failed to load conversion count: ${e}`);
+	}
+}
+
+/**
+ * Increment the global conversion count and persist to localStorage
+ */
+export function incrementConversionCount(num: number | null = null) {
+	conversionCount.update((n) => {
+		const newCount = n + 1;
+		if (browser) {
+			try {
+				localStorage.setItem("conversionCount", newCount.toString());
+			} catch (e) {
+				error(["store"], `Failed to save conversion count: ${e}`);
+			}
+		}
+		if (num !== null) {
+			return num;
+		}
+		return newCount;
+	});
 }
 
 export const files = new Files();

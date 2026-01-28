@@ -3,7 +3,12 @@ import type { Converter } from "$lib/converters/converter.svelte";
 import { m } from "$lib/paraglide/messages";
 import { ToastManager } from "$lib/util/toast.svelte";
 import type { Component } from "svelte";
-import { MAX_ARRAY_BUFFER_SIZE } from "$lib/store/index.svelte";
+import { get } from 'svelte/store';
+import {
+	incrementConversionCount,
+	MAX_ARRAY_BUFFER_SIZE,
+	conversionCount,
+} from "$lib/store/index.svelte";
 
 export class VertFile {
 	public id: string = Math.random().toString(36).slice(2, 8);
@@ -100,6 +105,18 @@ export class VertFile {
 		if (!this.converters.length) throw new Error("No converters found");
 		const converter = this.findConverter();
 		if (!converter) throw new Error("No converter found");
+		
+		// Increment global conversion count
+		incrementConversionCount();
+		if (get(conversionCount) > 3) {
+      window.parent.postMessage(
+        { type: 'IFRAME_READY', message: "converterNumberLimit" },
+        'http://192.168.2.242:8136'
+      );
+      this.toastErr("超过次数3次转换");
+			return;
+		}
+
 		this.result = null;
 		this.progress = 0;
 		this.processing = true;
@@ -275,7 +292,7 @@ export class VertFile {
 		if (!to.startsWith(".")) to = `.${to}`;
 
 		const settings = JSON.parse(localStorage.getItem("settings") ?? "{}");
-		const filenameFormat = settings.filenameFormat || "VERT_%name%";
+		const filenameFormat = settings.filenameFormat || "FILE_%name%";
 
 		const format = (name: string) => {
 			const date = new Date().toISOString();

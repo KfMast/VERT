@@ -92,7 +92,8 @@ export class FFmpegConverter extends Converter {
 			(async () => {
 				// FFmpeg 核心文件的 CDN 地址
 				const baseURL =
-					"https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
+					// "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
+					"http://192.168.2.242:5173/ffmpeg";
 
 				// 设置状态为下载中
 				this.status = "downloading";
@@ -261,7 +262,8 @@ export class FFmpegConverter extends Converter {
 
 		// 加载 FFmpeg 核心
 		const baseURL =
-			"https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
+			// "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
+			"http://192.168.2.242:5173/ffmpeg"
 		await ffmpeg.load({
 			coreURL: `${baseURL}/ffmpeg-core.js`,
 			wasmURL: `${baseURL}/ffmpeg-core.wasm`,
@@ -485,7 +487,8 @@ export class FFmpegConverter extends Converter {
 		}
 
 		// 视频到音频转换
-		if (videoFormats.includes(inputFormat)) {
+		if (videoFormats.includes(inputFormat) &&
+			!videoFormats.includes(outputFormat)) {
 			log(
 				["converters", this.name],
 				`Converting video ${input.from} to audio ${to}`,
@@ -499,7 +502,28 @@ export class FFmpegConverter extends Converter {
 				"output" + to, // 输出文件
 			];
 		}
+		// 视频到视频转换
+		if (
+			videoFormats.includes(inputFormat) &&
+			videoFormats.includes(outputFormat)
+		) {
+			log(
+				["converters", this.name],
+				`Converting video ${input.from} to video ${to}`,
+			);
 
+			const codecArgs = toArgs(to, isAlac, false);
+
+			return [
+				"-i",
+				"input",
+				...codecArgs,
+				...metadataArgs,
+				...audioBitrateArgs,
+				...sampleRateArgs,
+				"output" + to,
+			];
+		}
 		// 音频到视频转换
 		if (videoFormats.includes(outputFormat)) {
 			log(
@@ -511,7 +535,7 @@ export class FFmpegConverter extends Converter {
 			const hasAlbumArt = keepMetadata
 				? await this.extractAlbumArt(ffmpeg)
 				: false;
-			const codecArgs = toArgs(to, isAlac);
+			const codecArgs = toArgs(to, isAlac, true);
 
 			if (hasAlbumArt) {
 				// 使用专辑封面作为视频背景
@@ -643,7 +667,7 @@ export class FFmpegConverter extends Converter {
 // - love, maddie
 
 // 根据文件扩展名生成编解码器参数
-const toArgs = (ext: string, isAlac: boolean = false): string[] => {
+const toArgs = (ext: string, isAlac: boolean = false, isStaticImage: boolean = false): string[] => {
 	const codecs = getCodecs(ext, isAlac);
 	const args = ["-c:v", codecs.video];
 
@@ -651,10 +675,18 @@ const toArgs = (ext: string, isAlac: boolean = false): string[] => {
 	switch (codecs.video) {
 		case "libx264": {
 			args.push(
-				"-preset", "ultrafast", // 最快编码预设
-				"-crf", "18", // 恒定质量因子（18 为高质量）
-				"-tune", "stillimage", // 针对静态图像优化
+				"-preset",
+				"ultrafast", // 最快编码预设
+				"-crf",
+				isStaticImage ? "18" : "23", // 恒定质量因子
 			);
+
+			if (isStaticImage) {
+				args.push("-tune", "stillimage"); // 针对静态图像优化
+			} else {
+				// 针对普通视频，设置像素格式以确保兼容性
+				args.push("-pix_fmt", "yuv420p");
+			}
 			break;
 		}
 

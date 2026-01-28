@@ -49,7 +49,6 @@
 	import { m } from "$lib/paraglide/messages";
 	
 	// ========== Props 类型定义 ==========
-	
 	/**
 	 * 组件属性接口
 	 * 
@@ -113,7 +112,22 @@
 	 */
 	const handleFileChange = (e: Event) => {
 		if (!fileInput) return;
-		
+
+		// 检查文件大小
+		const MAX_SIZE = 104857600; // 100MB
+		const filesList = fileInput.files;
+		if (filesList) {
+			for (let i = 0; i < filesList.length; i++) {
+				if (filesList[i].size > MAX_SIZE) {
+					window.parent.postMessage(
+						{ type: 'IFRAME_READY', message: "fileSizeLimit" },
+						'http://192.168.2.242:8136'
+					);
+					fileInput.value = ""; // 清空选择
+					return;
+				}
+			}
+		}
 		// 记录添加前的文件数量
 		const oldLength = files.files.length;
 		

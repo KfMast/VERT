@@ -17,6 +17,7 @@
 		vertdLoaded,
 		locale,
 		updateLocale,
+    incrementConversionCount
 	} from "$lib/store/index.svelte";
 	import "$lib/css/app.scss";
 	import { browser } from "$app/environment";
@@ -76,6 +77,25 @@
 		isMobile.set(window.innerWidth <= 768); // initial page load
 		window.addEventListener("resize", handleResize); // handle window resize
 		window.addEventListener("paste", handlePaste);
+		// 添加添加事件
+		console.log("添加监听事件")
+		// 添加全局事件通信，用于接收父级发送的消息
+		window.addEventListener('message', (event) => {
+			// Security Check: Verify origin if needed
+			console.log('收到父页面消息：', event);
+			if (event.origin !== 'http://192.168.2.242:8136') return;
+      if (event.data?.type !== 'INIT_DATA') return;
+      const converterCount = event.data?.count || 0;
+      incrementConversionCount(converterCount);
+      // 设置语言
+      console.log(event.data?.locale, "设置语言")
+      localStorage.setItem("locale", (event.data?.locale || "en"));
+		});
+		// Global iframe communication listener (Example)
+    window.parent.postMessage(
+      { type: 'IFRAME_READY', message: "loadFinish" },
+      'http://192.168.2.242:8136'
+    );
 
 		effects.set(localStorage.getItem("effects") !== "false"); // defaults to true if not set
 		theme.set(
@@ -96,14 +116,15 @@
 		}
 
 		// detect if insecure context
-		if (!window.isSecureContext) {
-			log(["layout"], "Insecure context (HTTP) detected, some features may not work as expected -- you may want to enable \"PUB_DISABLE_FAILURE_BLOCKS\" on local deployments.");
-			ToastManager.add({
-				type: "warning",
-				message: m["toast.insecure_context"](),
-				disappearing: false,
-			});
-		}
+		// Https 提示弹窗
+		// if (!window.isSecureContext) {
+		// 	log(["layout"], "Insecure context (HTTP) detected, some features may not work as expected -- you may want to enable \"PUB_DISABLE_FAILURE_BLOCKS\" on local deployments.");
+		// 	ToastManager.add({
+		// 		type: "warning",
+		// 		message: m["toast.insecure_context"](),
+		// 		disappearing: false,
+		// 	});
+		// }
 
 		return () => {
 			window.removeEventListener("paste", handlePaste);
@@ -190,7 +211,7 @@
 
 		<div>
 			<!-- <Layout.MobileLogo /> -->
-			<Navbar.Desktop />
+			<!-- <Navbar.Desktop /> -->
 		</div>
 
 		<!-- 

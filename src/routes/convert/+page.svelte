@@ -191,6 +191,18 @@
 	// ========== 副作用: 更新背景渐变颜色 ==========
 
 	/**
+	 * 格式化文件大小
+	 * @param bytes - 文件字节数
+	 */
+	const formatSize = (bytes: number) => {
+		if (bytes === 0) return "0 B";
+		const k = 1024;
+		const sizes = ["B", "KB", "MB", "GB", "TB"];
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+	};
+
+	/**
 	 * 动态背景渐变颜色控制
 	 *
 	 * 设计理念: 根据文件类型显示不同颜色的渐变背景
@@ -298,12 +310,19 @@
 					/>
 				{:else}
 					<!-- 空闲状态 -->
-					<h2
-						class="text-xl font-body overflow-hidden text-ellipsis whitespace-nowrap"
-						title={file.name}
-					>
-						{file.name}
-					</h2>
+					<div class="flex items-center gap-2 w-full min-w-0">
+						<h2
+							class="text-xl font-body overflow-hidden text-ellipsis whitespace-nowrap flex-1 min-w-0"
+							title={file.name}
+						>
+							{file.name}
+						</h2>
+						<span
+							class="text-sm text-muted-foreground whitespace-nowrap flex-shrink-0"
+						>
+							{formatSize(file.file.size)}
+						</span>
+					</div>
 				{/if}
 			</div>
 
@@ -520,7 +539,7 @@
 									<button
 										class="btn {$effects
 											? ''
-											: '!scale-100'} p-0 w-14 h-14 text-black {isAudio
+											: '!scale-100'} p-0 w-14 h-14 text-white {isAudio
 											? 'bg-accent-purple'
 											: isVideo
 												? 'bg-accent-red'

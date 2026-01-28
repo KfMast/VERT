@@ -25,7 +25,7 @@
 			}}
 		>
 			<div
-				class="flex flex-col h-full pb-32"
+				class="flex flex-col h-full pt-16 pb-16"
 				in:fade={{
 					duration,
 					easing: quintOut,
