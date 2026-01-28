@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+	</head>
+	<body>
+		<div>
+      <iframe id="iframe" width="100%" height="450px" src="http://192.168.10.74:5173/convert/" frameborder="0"></iframe>
+    </div>
+    <script>
+      (function() {
+        var iframe = document.getElementById('iframe');
+        
+        // Debounce function to prevent excessive updates
+        function debounce(func, wait) {
+          var timeout;
+          return function() {
+            var context = this, args = arguments;
+            clearTimeout(timeout);
+            timeout = setTimeout(function() {
+              func.apply(context, args);
+            }, wait);
+          };
+        }
+
+        function updateHeight(height) {
+          if (iframe) {
+            iframe.style.height = height + 'px';
+          }
+        }
+
+        // We use a small debounce here as well, although the sender also debounces
+        var debouncedUpdate = debounce(updateHeight, 50);
+
+        function handleMessage(event) {
+          // Verify message structure
+          if (event.data && event.data.type === 'VERT_RESIZE' && typeof event.data.height === 'number') {
+             debouncedUpdate(event.data.height);
+          }
+        }
+
+        window.addEventListener('message', handleMessage);
+      })();
+    </script>
+	</body>
+</html>

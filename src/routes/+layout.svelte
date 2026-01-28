@@ -126,9 +126,43 @@
 		// 	});
 		// }
 
+		// --- Dynamic Iframe Resizing ---
+		const sendHeight = () => {
+			if (!browser) return;
+			const height = Math.max(
+				document.body.scrollHeight,
+				document.documentElement.scrollHeight
+			);
+			window.parent.postMessage({ type: 'VERT_RESIZE', height }, '*');
+		};
+
+		let resizeTimeout: number;
+		const debouncedSendHeight = () => {
+			clearTimeout(resizeTimeout);
+			resizeTimeout = window.setTimeout(sendHeight, 100);
+		};
+
+		const resizeObserver = new ResizeObserver(() => {
+			debouncedSendHeight();
+		});
+
+		if (browser) {
+			resizeObserver.observe(document.body);
+			resizeObserver.observe(document.documentElement);
+			// Also listen for image loading which might change height
+			window.addEventListener('load', debouncedSendHeight);
+			// Initial send
+			sendHeight();
+		}
+
 		return () => {
 			window.removeEventListener("paste", handlePaste);
 			window.removeEventListener("resize", handleResize);
+			if (browser) {
+				window.removeEventListener('load', debouncedSendHeight);
+				resizeObserver.disconnect();
+				clearTimeout(resizeTimeout);
+			}
 		};
 	});
 
