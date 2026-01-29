@@ -33,7 +33,7 @@ export function getConverterByFormat(format: string) {
 
 export const categories: Categories = {
 	image: { formats: [""], canConvertTo: [] },
-	video: { formats: [""], canConvertTo: ["audio", "video"] },
+	video: { formats: [""], canConvertTo: ["audio"] },
 	audio: { formats: [""], canConvertTo: ["video"] },
 	doc: { formats: [""], canConvertTo: [] },
 };
@@ -45,8 +45,8 @@ categories.audio.formats =
 		.map((f) => f.name) || [];
 categories.video.formats =
 	converters
-		.find((c) => c.name === "ffmpeg")
-		?.supportedFormats.filter((f) => f.toSupported)
+		.find((c) => c.name === "vertd")
+		?.supportedFormats.filter((f) => f.toSupported && f.isNative)
 		.map((f) => f.name) || [];
 categories.image.formats =
 	converters

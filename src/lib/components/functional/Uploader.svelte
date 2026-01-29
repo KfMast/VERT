@@ -112,28 +112,34 @@
 	 */
 	const handleFileChange = (e: Event) => {
 		if (!fileInput) return;
-
 		// 检查文件大小
 		const MAX_SIZE = 104857600; // 100MB
 		const filesList = fileInput.files;
+		const addFiles = [];
+		let isIncludeBigFile = false;
 		if (filesList) {
 			for (let i = 0; i < filesList.length; i++) {
 				if (filesList[i].size > MAX_SIZE) {
-					window.parent.postMessage(
-						{ type: 'IFRAME_READY', message: "fileSizeLimit" },
-						'http://192.168.2.242:8136'
-					);
-					fileInput.value = ""; // 清空选择
-					return;
+					// fileInput.value = ""; // 清空选择
+					isIncludeBigFile = true;
+					continue;
 				}
+				addFiles.push(filesList[i]);
 			}
+		}
+		if (isIncludeBigFile) {
+			window.parent.postMessage(
+				{ type: 'IFRAME_READY', message: "fileSizeLimit" },
+				'http://192.168.2.242:8136'
+			);
 		}
 		// 记录添加前的文件数量
 		const oldLength = files.files.length;
 		
 		// 将选择的文件添加到队列
 		// files.add() 内部会处理单个文件、文件数组、FileList 等多种情况
-		files.add(fileInput.files);
+		// files.add(fileInput.files);
+		files.add(addFiles);
 		
 		// 只有当确实添加了新文件时才跳转
 		// 避免用户取消选择后又跳转到转换页面

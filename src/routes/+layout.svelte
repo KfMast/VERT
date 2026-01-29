@@ -67,6 +67,42 @@
 		if (oldLength !== files.files.length) goto("/convert");
 	};
 
+	let mainContainer = $state<HTMLElement>();
+	$effect(() => {
+		if (!browser || !mainContainer) return;
+
+		const sendHeight = () => {
+			if (!mainContainer) return;
+			const height = mainContainer.scrollHeight;
+			window.parent.postMessage(
+				{ type: "IFRAME_READY", message: "updateHeight", height },
+				"http://192.168.2.242:8136",
+			);
+		};
+
+		let resizeTimeout: number;
+		const debouncedSendHeight = () => {
+			clearTimeout(resizeTimeout);
+			resizeTimeout = window.setTimeout(sendHeight, 100);
+		};
+
+		const resizeObserver = new ResizeObserver(() => {
+			debouncedSendHeight();
+		});
+
+		try {
+			resizeObserver.observe(mainContainer);
+			// Initial send
+			sendHeight();
+		} catch (error) {
+			console.error("Failed to observe div:", error);
+		}
+
+		return () => {
+			resizeObserver.disconnect();
+			clearTimeout(resizeTimeout);
+		};
+	});
 	onMount(() => {
 		initAnimStores();
 
@@ -88,8 +124,9 @@
       const converterCount = event.data?.count || 0;
       incrementConversionCount(converterCount);
       // 设置语言
-      console.log(event.data?.locale, "设置语言")
-      localStorage.setItem("locale", (event.data?.locale || "en"));
+      // console.log(event.data?.locale, "设置语言")
+      // localStorage.setItem("locale", (event.data?.locale || "en"));
+			updateLocale((event.data?.locale || "en"));
 		});
 		// Global iframe communication listener (Example)
     window.parent.postMessage(
@@ -101,8 +138,8 @@
 		theme.set(
 			(localStorage.getItem("theme") as "light" | "dark") || "light",
 		);
-		const storedLocale = localStorage.getItem("locale");
-		if (storedLocale) updateLocale(storedLocale);
+		// const storedLocale = localStorage.getItem("locale");
+		// if (storedLocale) updateLocale(storedLocale);
 
 		Settings.instance.load();
 
@@ -127,42 +164,42 @@
 		// }
 
 		// --- Dynamic Iframe Resizing ---
-		const sendHeight = () => {
-			if (!browser) return;
-			const height = Math.max(
-				document.body.scrollHeight,
-				document.documentElement.scrollHeight
-			);
-			window.parent.postMessage({ type: 'VERT_RESIZE', height }, '*');
-		};
+		// const sendHeight = () => {
+		// 	if (!browser) return;
+		// 	const height = Math.max(
+		// 		document.body.scrollHeight,
+		// 		document.documentElement.scrollHeight
+		// 	);
+		// 	window.parent.postMessage({ type: 'IFRAME_READY',message: "updateHeight", height }, 'http://192.168.2.242:8136');
+		// };
 
-		let resizeTimeout: number;
-		const debouncedSendHeight = () => {
-			clearTimeout(resizeTimeout);
-			resizeTimeout = window.setTimeout(sendHeight, 100);
-		};
+		// let resizeTimeout: number;
+		// const debouncedSendHeight = () => {
+		// 	clearTimeout(resizeTimeout);
+		// 	resizeTimeout = window.setTimeout(sendHeight, 100);
+		// };
 
-		const resizeObserver = new ResizeObserver(() => {
-			debouncedSendHeight();
-		});
+		// const resizeObserver = new ResizeObserver(() => {
+		// 	debouncedSendHeight();
+		// });
 
-		if (browser) {
-			resizeObserver.observe(document.body);
-			resizeObserver.observe(document.documentElement);
-			// Also listen for image loading which might change height
-			window.addEventListener('load', debouncedSendHeight);
-			// Initial send
-			sendHeight();
-		}
+		// if (browser) {
+		// 	resizeObserver.observe(document.body);
+		// 	resizeObserver.observe(document.documentElement);
+		// 	// Also listen for image loading which might change height
+		// 	window.addEventListener('load', debouncedSendHeight);
+		// 	// Initial send
+		// 	sendHeight();
+		// }
 
 		return () => {
 			window.removeEventListener("paste", handlePaste);
 			window.removeEventListener("resize", handleResize);
-			if (browser) {
-				window.removeEventListener('load', debouncedSendHeight);
-				resizeObserver.disconnect();
-				clearTimeout(resizeTimeout);
-			}
+			// if (browser) {
+			// 	window.removeEventListener('load', debouncedSendHeight);
+			// 	resizeObserver.disconnect();
+			// 	clearTimeout(resizeTimeout);
+			// }
 		};
 	});
 
@@ -234,6 +271,7 @@
 <!-- FIXME: if user resizes between desktop/mobile, highlight of page disappears (only shows on original size) -->
 {#key $locale}
 	<div
+		bind:this={mainContainer}
 		class="flex flex-col min-h-screen h-full w-full overflow-x-hidden"
 		ondrop={dropFiles}
 		ondragenter={(e) => handleDrag(e, true)}

@@ -79,13 +79,13 @@
 		/>
 	</div>
 {/if}
-
+	<!-- mask-image: {maskImage}; 
+	-webkit-mask-image: {maskImage};
+	transition: background-color {duration}ms {transition}; -->
 <div
 	class="fixed top-0 left-0 w-screen h-screen -z-40 pointer-events-none"
 	style="background-color: {color.color}; 
-	mask-image: {maskImage}; 
-	-webkit-mask-image: {maskImage};
-	transition: background-color {duration}ms {transition};"
+	"
 ></div>
 
 {#if page.url.pathname === "/convert/" && files.files.length === 1}

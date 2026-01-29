@@ -67,7 +67,12 @@ export class VertFile {
 				(f) => f.name === this.to,
 			);
 			if (!theirFrom || !theirTo) return false;
-			if (!theirFrom.isNative && !theirTo.isNative) return false;
+			if (
+				!theirFrom.isNative &&
+				!theirTo.isNative &&
+				converter.name !== "ffmpeg"
+			)
+				return false;
 			return true;
 		});
 		return converter;
@@ -113,7 +118,6 @@ export class VertFile {
         { type: 'IFRAME_READY', message: "converterNumberLimit" },
         'http://192.168.2.242:8136'
       );
-      this.toastErr("超过次数3次转换");
 			return;
 		}
 
@@ -322,6 +326,11 @@ export class VertFile {
 	}
 
 	public hash(): Promise<string> {
+		if (!globalThis.crypto?.subtle) {
+			console.warn("Crypto API not available, skipping hash generation");
+			return Promise.resolve("hash-not-available-" + Math.random().toString(36).slice(2));
+		}
+
 		const stream = this.file.stream();
 		const hashes = new Set<string>();
 		const reader = stream.getReader();
