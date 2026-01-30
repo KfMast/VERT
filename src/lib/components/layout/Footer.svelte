@@ -36,13 +36,13 @@
 		>
 			{m["footer.discord_server"]()}
 		</a>
-		<p>•</p>
+		<!-- <p>•</p>
 		<a
 			class="hover:underline font-normal"
 			href="/privacy/"
 		>
 			{m["footer.privacy_policy"]()}
-		</a>
+		</a> -->
 		{#if commitHash}
 			<p>•</p>
 			<a

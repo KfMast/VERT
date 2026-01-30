@@ -4,6 +4,7 @@ import { m } from "$lib/paraglide/messages";
 import { ToastManager } from "$lib/util/toast.svelte";
 import type { Component } from "svelte";
 import { get } from 'svelte/store';
+import { PUB_IFRAME_TARGET_ORIGIN } from "$env/static/public";
 import {
 	incrementConversionCount,
 	MAX_ARRAY_BUFFER_SIZE,
@@ -116,7 +117,7 @@ export class VertFile {
 		if (get(conversionCount) > 3) {
       window.parent.postMessage(
         { type: 'IFRAME_READY', message: "converterNumberLimit" },
-        'http://192.168.2.242:8136'
+        PUB_IFRAME_TARGET_ORIGIN,
       );
 			return;
 		}

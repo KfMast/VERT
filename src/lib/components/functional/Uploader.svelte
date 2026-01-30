@@ -47,6 +47,7 @@
 	
 	// 国际化消息 - 获取本地化文本
 	import { m } from "$lib/paraglide/messages";
+	import { PUB_IFRAME_TARGET_ORIGIN } from "$env/static/public";
 	
 	// ========== Props 类型定义 ==========
 	/**
@@ -79,7 +80,7 @@
 	 * 特点: 实际使用时不直接显示，通过 click() 方法触发
 	 */
 	let fileInput = $state<HTMLInputElement>();
-	
+
 	// ========== 事件处理函数 ==========
 	
 	/**
@@ -130,7 +131,7 @@
 		if (isIncludeBigFile) {
 			window.parent.postMessage(
 				{ type: 'IFRAME_READY', message: "fileSizeLimit" },
-				'http://192.168.2.242:8136'
+				PUB_IFRAME_TARGET_ORIGIN,
 			);
 		}
 		// 记录添加前的文件数量

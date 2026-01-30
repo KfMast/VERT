@@ -34,12 +34,12 @@
 			badge?: number;
 		}[]
 	>([
-		{
-			name: m["navbar.upload"](),
-			url: "/",
-			activeMatch: (pathname) => pathname === "/",
-			icon: UploadIcon,
-		},
+		// {
+		// 	name: m["navbar.upload"](),
+		// 	url: "/",
+		// 	activeMatch: (pathname) => pathname === "/",
+		// 	icon: UploadIcon,
+		// },
 		{
 			name: m["navbar.convert"](),
 			url: "/convert/",
@@ -48,18 +48,18 @@
 			icon: RefreshCw,
 			badge: files.files.length,
 		},
-		{
-			name: m["navbar.settings"](),
-			url: "/settings/",
-			activeMatch: (pathname) => pathname.startsWith("/settings"),
-			icon: SettingsIcon,
-		},
-		{
-			name: m["navbar.about"](),
-			url: "/about/",
-			activeMatch: (pathname) => pathname.startsWith("/about"),
-			icon: InfoIcon,
-		},
+		// {
+		// 	name: m["navbar.settings"](),
+		// 	url: "/settings/",
+		// 	activeMatch: (pathname) => pathname.startsWith("/settings"),
+		// 	icon: SettingsIcon,
+		// },
+		// {
+		// 	name: m["navbar.about"](),
+		// 	url: "/about/",
+		// 	activeMatch: (pathname) => pathname.startsWith("/about"),
+		// 	icon: InfoIcon,
+		// },
 	]);
 
 	let links = $state<HTMLAnchorElement[]>([]);

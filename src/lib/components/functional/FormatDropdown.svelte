@@ -471,7 +471,7 @@
 						<button
 							class="w-full p-2 text-center rounded-xl
 							{format === selected
-								? 'bg-accent text-black'
+								? 'bg-accent text-white'
 								: format === from
 									? 'bg-separator'
 									: 'hover:bg-panel'}"

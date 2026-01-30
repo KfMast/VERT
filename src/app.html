@@ -23,6 +23,7 @@
 				try {
 					// Apply theme before DOM is loaded
 					let theme = localStorage.getItem("theme");
+					theme = "light";
 					const prefersDark = window.matchMedia(
 						"(prefers-color-scheme: dark)",
 					).matches;

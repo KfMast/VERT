@@ -53,12 +53,12 @@
 			))}
 		</span>
 	</p>
-	<p>
+	<!-- <p>
 		{@html sanitize(link(
 			["privacy_link"],
 			m["convert.errors.vertd_details_footer"](),
 			"/privacy",
 			[true],
 		))}
-	</p>
+	</p> -->
 </div>

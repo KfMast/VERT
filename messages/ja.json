@@ -64,7 +64,9 @@
 			"video": "動画",
 			"doc": "ドキュメント",
 			"image": "画像",
-			"placeholder": "フォーマットを検索"
+			"placeholder": "フォーマットを検索",
+			"no_formats": "利用可能な形式がありません",
+			"no_results": "検索条件に一致する形式はありません"
 		},
 		"tooltips": {
 			"unknown_file": "不明なファイルタイプ",

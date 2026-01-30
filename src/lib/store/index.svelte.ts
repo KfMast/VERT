@@ -11,6 +11,7 @@ import { m } from "$lib/paraglide/messages";
 import sanitizeHtml from "sanitize-html";
 import { ToastManager } from "$lib/util/toast.svelte";
 import { GB } from "$lib/util/consts";
+import { PUB_IFRAME_TARGET_ORIGIN } from "$env/static/public";
 
 class Files {
 	public files = $state<VertFile[]>([]);
@@ -374,7 +375,7 @@ class Files {
 			// 使用iframe 与父级通信，通知父级限制弹窗
 			window.parent.postMessage(
         { type: 'IFRAME_READY', message: "batchDownloadLimit" },
-        'http://192.168.2.242:8136'
+        PUB_IFRAME_TARGET_ORIGIN,
       );
 			return;
 		}
@@ -509,9 +510,13 @@ export const availableLocales = {
 	ja: "日本語",
 	ko: "한국어",
 	el: "Ελληνικά",
-	"zh-Hans": "简体中文",
-	"zh-Hant": "繁體中文",
-	"pt-BR": "Português (Brasil)",
+	ar: "العربية",
+	pl: "Polski",
+	ru: "Русский",
+	th: "ไทย",
+	"zh-cn": "简体中文",
+	"zh-tw": "繁體中文",
+	"pt": "Português",
 };
 
 export function updateLocale(newLocale: string) {

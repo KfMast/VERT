@@ -56,11 +56,34 @@ export default {
 	},
 
 	plugins: [
-		plugin(function ({ addVariant }) {
+		plugin(function ({ addVariant, addUtilities }) {
 			addVariant("dynadark", [
 				":root:not(.light).dark &",
 				"@media (prefers-color-scheme: dark) { :root:not(.light) &",
 			]);
+
+			addUtilities({
+				".scrollbar-hide": {
+					/* IE and Edge */
+					"-ms-overflow-style": "none",
+					/* Firefox */
+					"scrollbar-width": "none",
+					/* Safari and Chrome */
+					"&::-webkit-scrollbar": {
+						display: "none",
+					},
+				},
+				".scrollbar-default": {
+					/* IE and Edge */
+					"-ms-overflow-style": "auto",
+					/* Firefox */
+					"scrollbar-width": "auto",
+					/* Safari and Chrome */
+					"&::-webkit-scrollbar": {
+						display: "block",
+					},
+				},
+			});
 		}),
 	],
 } satisfies Config;

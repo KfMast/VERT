@@ -13,7 +13,8 @@
 	import type { WorkerStatus } from "$lib/converters/converter.svelte";
 	import { sanitize } from "$lib/store/index.svelte";
 	import { DISABLE_ALL_EXTERNAL_REQUESTS } from "$lib/util/consts";
-
+	import { goto } from "$app/navigation";
+	if (browser) goto("/convert");
 	const getSupportedFormats = (name: string) =>
 		converters
 			.find((c) => c.name === name)
@@ -131,7 +132,7 @@
 </script>
 
 <div class="max-w-6xl w-full mx-auto px-6 md:px-8">
-	<div class="flex items-center justify-center pb-10 md:py-16">
+	<!-- <div class="flex items-center justify-center pb-10 md:py-16">
 		<div
 			class="flex items-center h-auto gap-12 md:gap-24 md:flex-row flex-col"
 		>
@@ -278,7 +279,6 @@
 									</div>
 								</div>
 							</OverlayScrollbarsComponent>
-							<!-- blur at bottom if scrollable - positioned relative to the card container -->
 							{#if showBlur[i]}
 								<div
 									class="absolute left-0 bottom-0 w-full h-10 pointer-events-none"
@@ -290,7 +290,7 @@
 				{/each}
 			{/if}
 		</div>
-	</div>
+	</div> -->
 </div>
 
 <style lang="postcss">

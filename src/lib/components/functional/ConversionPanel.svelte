@@ -34,7 +34,7 @@
 				class="btn {$effects
 					? ''
 					: '!scale-100'} flex gap-3 max-md:w-full md:max-w-[15.5rem]"
-				disabled={!files.ready || !files.results}
+				disabled={!files.ready}
 				onclick={() => files.downloadAll()}
 			>
 				<FolderArchiveIcon size="24" />

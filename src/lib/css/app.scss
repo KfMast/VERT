@@ -33,7 +33,7 @@
 	// general
 	--accent-pink: #5F44DE;
 	--accent-pink-alt: hsl(302, 100%, 50%);
-	--accent-pink-muted: hsl(302, 98%, 42%);
+	--accent-pink-muted: #5F44DE;
 	--accent-red: hsl(348, 100%, 80%);
 	--accent-red-alt: hsl(348, 100%, 50%);
 	--accent-purple: hsl(264, 100%, 81%);
@@ -153,6 +153,7 @@
 	--bg-button: var(--bg-panel-highlight);
 	--bg-badge: var(--accent-pink);
 	--bg-input: #e0e0e0;
+	--bg-scrollbar: #6044de1a;
 
 	--shadow-panel: 0 2px 4px 0 hsla(0, 0%, 0%, 0.15);
 }
@@ -304,13 +305,58 @@
 	@include dark;
 }
 
+/* Global scrollbar styles for other elements */
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--bg-separator);
+	border-radius: 6px;
+	border: 2px solid transparent;
+	background-clip: content-box;
+}
+
 body {
 	@apply text-foreground font-body font-semibold overflow-x-hidden;
 	width: 100vw;
 	background-color: var(--bg);
 	background-size: 100vw 100vh;
+
+	/* Custom Scrollbar Styles for the whole page */
+	&::-webkit-scrollbar {
+		width: 10px;
+	}
+
+	&::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	&::-webkit-scrollbar-thumb {
+		background: var(--bg-scrollbar);
+		border-radius: 10px;
+		border: 3px solid var(--bg);
+		background-clip: content-box;
+
+	}
+
+	/* Firefox Support */
 }
 
+/* OverlayScrollbars customization to match global style */
+.os-theme-dark,
+.os-theme-light {
+	--os-handle-bg: var(--bg-separator);
+	--os-handle-bg-hover: var(--fg-muted);
+	--os-handle-bg-active: var(--fg-muted);
+	--os-handle-border-radius: 10px;
+	--os-size: 8px;
+}
 ::selection,
 ::-moz-selection {
 	@apply bg-accent-blue text-on-accent;

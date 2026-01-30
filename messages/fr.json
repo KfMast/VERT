@@ -58,7 +58,9 @@
 			"video": "Video",
 			"doc": "Document",
 			"image": "Image",
-			"placeholder": "Format de recherche"
+			"placeholder": "Format de recherche",
+			"no_formats": "Aucun format disponible",
+			"no_results": "Aucun format ne correspond à votre recherche"
 		},
 		"tooltips": {
 			"unknown_file": "Type de fichier inconnu",

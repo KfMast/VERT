@@ -93,7 +93,7 @@ export class FFmpegConverter extends Converter {
 				// FFmpeg 核心文件的 CDN 地址
 				const baseURL =
 					// "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
-					"http://192.168.2.242:5173/ffmpeg";
+					"https://beec.okmusi.com/ffmpeg";
 
 				// 设置状态为下载中
 				this.status = "downloading";
@@ -263,7 +263,7 @@ export class FFmpegConverter extends Converter {
 		// 加载 FFmpeg 核心
 		const baseURL =
 			// "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
-			"http://192.168.2.242:5173/ffmpeg"
+			"https://beec.okmusi.com/ffmpeg"
 		await ffmpeg.load({
 			coreURL: `${baseURL}/ffmpeg-core.js`,
 			wasmURL: `${baseURL}/ffmpeg-core.wasm`,
